@@ -1,0 +1,47 @@
+Efforts to reverse engineer the Quanscheng UV-K5 radio
+(c) 2023 Jacek Lipkowski <sq5bpf@lipkowski.org>
+
+Licensed cc-by-sa-4.0
+
+This repository contains my efforts at reverse engineering the programming
+protocol and memory contents of the Quansheng UV-K5 radio, so that the radio
+is supported by opensource software (chirp or other).
+
+
+
+Files in this repository:
+
+UVK5_memory_map_20230515_2.ods is the memory map i've reverse engineered using
+the UK-K5 emulator.
+
+sample_read.txt - dump of communication while reading the radio 
+
+sample_write.txt - dump of communication while writing to the radio 
+
+deobfuscate.py - a script to deobfuscate reading the above files. usage:
+./deobfuscate.py < sample_read.txt |less
+
+
+Resources:
+
+Quansheng UV-K5 EEPROM programmer
+https://github.com/sq5bpf/k5prog
+ 
+k5prog is a tool to read and write the radio eeprom. This can be used to
+reverse engineer the eeprom contents, backup the radio etc.
+
+
+Quansheng UV-K5 emulator
+https://github.com/sq5bpf/k5emulator
+
+k5emulator is a tool that looks like a real radio to UV-K5 programming
+software. The eeprom contents are stored in a file. Changes to this file can
+be studied to see what the original software does.
+
+Quansheng UV-K5 Firmware collection
+https://github.com/amnemonic/Quansheng_UV-K5_Firmware
+
+amnemonic's repository of firmware. Also has various bits and pieces reversed.
+This includes the firmware files xor obfuscation, which is great because in
+the future maybe they will be reverse engineered to see what the radio is
+capable of, or to make opensource firmware for this radio.
