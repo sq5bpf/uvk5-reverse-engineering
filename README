@@ -26,7 +26,7 @@ hexediting by hand. It will be later removed it i can get it into the chirp
 repository.
 
 
-To use the experimental chirp driver:
+To use the experimental chirp driver on all OS-es:
 
 - Install chirp-next, minimum version 20230515
 
@@ -34,11 +34,24 @@ To use the experimental chirp driver:
 
 - Enable developer mode in chirp (Help -> Developer mode), restart chirp
 
-- File -> Load module , select the uvk5.py file that you've downloaded
+- File -> Load module , select the uvk5.py file that you've downloaded 
+(do this every time you start chirp)
 
 - Now you can select the UV-K5 from the list of radios
 
 - Download a copy of the radio memory with k5prog or chirp and keep it safe.
+
+
+
+Alternate instructions for linux users:
+
+- Install chirp-next, minimum version 20230515
+
+- Find the drivers directory (it's easiest to search for an existing driver, 
+for example uv5r.py). Put the uvk5.py file there
+
+- Launch chirp. No need to enable developer mode, no need to load the 
+driver on each program start etc. 
 
 
 Resources:
