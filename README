@@ -21,6 +21,23 @@ sample_write.txt - dump of communication while writing to the radio
 deobfuscate.py - a script to deobfuscate reading the above files. usage:
 ./deobfuscate.py < sample_read.txt |less
 
+uvk5.py - experimental driver for chirp. Sometimes it's more useful than
+hexediting by hand. It will be later removed it i can get it into the chirp
+repository.
+
+
+To use the experimental chirp driver:
+
+- Install chirp-next, minimum version 20230515
+
+- Find the chirp driver directory. It's best to search for some existing
+  driver like uv5r.py. The path will differ, for example on my system it's in:
+  ~/.local/pipx/venvs/chirp/lib/python3.11/site-packages/chirp/drivers
+
+- Copy the uvk5.py file into this directory
+
+- Download a copy of the radio memory with k5prog or chirp and keep it safe.
+
 
 Resources:
 
