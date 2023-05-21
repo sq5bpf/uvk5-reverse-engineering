@@ -30,11 +30,13 @@ To use the experimental chirp driver:
 
 - Install chirp-next, minimum version 20230515
 
-- Find the chirp driver directory. It's best to search for some existing
-  driver like uv5r.py. The path will differ, for example on my system it's in:
-  ~/.local/pipx/venvs/chirp/lib/python3.11/site-packages/chirp/drivers
+- Download the uvk5.py file from this repository
 
-- Copy the uvk5.py file into this directory
+- Enable developer mode in chirp (Help -> Developer mode), restart chirp
+
+- File -> Load module , select the uvk5.py file that you've downloaded
+
+- Now you can select the UV-K5 from the list of radios
 
 - Download a copy of the radio memory with k5prog or chirp and keep it safe.
 
