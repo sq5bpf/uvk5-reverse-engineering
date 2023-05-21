@@ -39,7 +39,7 @@ from chirp.settings import RadioSetting, RadioSettingGroup, \
 
 LOG = logging.getLogger(__name__)
 
-DRIVER_VERSION="Quansheng UV-K5 driver v20230512 (c) Jacek Lipkowski SQ5BPF"
+DRIVER_VERSION="Quansheng UV-K5 driver v20230521 (c) Jacek Lipkowski SQ5BPF"
 PRINT_CONSOLE=False
 
 MEM_FORMAT = """
