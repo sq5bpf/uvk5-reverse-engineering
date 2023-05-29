@@ -11,7 +11,7 @@ is supported by opensource software (chirp or other).
 
 Files in this repository:
 
-UVK5_memory_map_20230515_2.ods is the memory map i've reverse engineered using
+UVK5_memory_map.ods is the memory map i've reverse engineered using
 the UK-K5 emulator.
 
 sample_read.txt - dump of communication while reading the radio 
@@ -30,17 +30,16 @@ To use the experimental chirp driver on all OS-es:
 
 - Install chirp-next, minimum version 20230515
 
-- Download the uvk5.py file from this repository
-
-- Enable developer mode in chirp (Help -> Developer mode), restart chirp
-
-- File -> Load module , select the uvk5.py file that you've downloaded 
-(do this every time you start chirp)
+- Click Help -> Load module from issue and enter 10478, and select the newest
+  uvk5.py file from the list (this should be the default selection).
 
 - Now you can select the UV-K5 from the list of radios
 
 - Download a copy of the radio memory with k5prog or chirp and keep it safe.
 
+You will need to do this every time chirp is started. This will load the
+driver i have posted in chirp issue 10748 at this url:
+https://chirp.danplanet.com/issues/10478
 
 
 Alternate instructions for linux users:
@@ -70,6 +69,7 @@ k5emulator is a tool that looks like a real radio to UV-K5 programming
 software. The eeprom contents are stored in a file. Changes to this file can
 be studied to see what the original software does.
 
+
 Quansheng UV-K5 Firmware collection
 https://github.com/amnemonic/Quansheng_UV-K5_Firmware
 
@@ -77,3 +77,11 @@ amnemonic's repository of firmware. Also has various bits and pieces reversed.
 This includes the firmware files xor obfuscation, which is great because in
 the future maybe they will be reverse engineered to see what the radio is
 capable of, or to make opensource firmware for this radio.
+
+
+
+Chirp issue #10478
+https://chirp.danplanet.com/issues/10478
+
+Discussion regarding chirp support for the UV-K5, and my driver for it.
+
