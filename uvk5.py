@@ -57,11 +57,21 @@ struct {
   ul32 offset;
   u8 rxcode;
   u8 txcode;
+
   u8 unknown1:2,
   txcodeflag:2,
   unknown2:2,
   rxcodeflag:2;
-  u8 flags1;
+
+  //u8 flags1;
+  u8 flags1_unknown7:1,
+  flags1_unknown6:1,
+  flags1_unknown5:1,
+  enable_am:1,
+  flags1_unknown3:1,
+  is_in_scanlist:1,
+  shift:2;
+
   u8 flags2;
   u8 dtmf_flags;
   u8 step;
@@ -844,9 +854,9 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if (mem.offset == 0):
             mem.duplex = ''
         else:
-            if (_mem.flags1 & FLAGS1_OFFSET_MASK) == FLAGS1_OFFSET_MINUS:
+            if _mem.shift  == FLAGS1_OFFSET_MINUS:
                 mem.duplex = '-'
-            elif (_mem.flags1 & FLAGS1_OFFSET_MASK) == FLAGS1_OFFSET_PLUS:
+            elif _mem.shift == FLAGS1_OFFSET_PLUS:
                 mem.duplex = '+'
             else:
                 mem.duplex = ''
@@ -855,7 +865,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         self._get_tone(mem, _mem)
 
         # mode
-        if (_mem.flags1 & FLAGS1_ISAM) > 0:
+        if _mem.enable_am > 0:
             if (_mem.flags2 & FLAGS2_BANDWIDTH) > 0:
                 mem.mode = "NAM"
             else:
@@ -1861,16 +1871,16 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # mode
         if mem.mode == "NFM":
             _mem.flags2 = _mem.flags2 | FLAGS2_BANDWIDTH
-            _mem.flags1 = _mem.flags1 & ~FLAGS1_ISAM
+            _mem.enable_am = 0;
         elif mem.mode == "FM":
             _mem.flags2 = _mem.flags2 & ~FLAGS2_BANDWIDTH
-            _mem.flags1 = _mem.flags1 & ~FLAGS1_ISAM
+            _mem.enable_am = 0;
         elif mem.mode == "NAM":
             _mem.flags2 = _mem.flags2 | FLAGS2_BANDWIDTH
-            _mem.flags1 = _mem.flags1 | FLAGS1_ISAM
+            _mem.enable_am = 1;
         elif mem.mode == "AM":
             _mem.flags2 = _mem.flags2 & ~FLAGS2_BANDWIDTH
-            _mem.flags1 = _mem.flags1 | FLAGS1_ISAM
+            _mem.enable_am = 1;
 
         # frequency/offset
         _mem.freq = mem.freq/10
@@ -1878,13 +1888,11 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         if mem.duplex == "off" or mem.duplex == "":
             _mem.offset = 0
-            _mem.flags1 = _mem.flags1 & ~FLAGS1_OFFSET_MASK
+            _mem.shift = 0
         elif mem.duplex == '-':
-            _mem.flags1 = (
-                    _mem.flags1 & ~FLAGS1_OFFSET_MASK) | FLAGS1_OFFSET_MINUS
+            _mem.shift = FLAGS1_OFFSET_MINUS
         elif mem.duplex == '+':
-            _mem.flags1 = (
-                    _mem.flags1 & ~FLAGS1_OFFSET_MASK) | FLAGS1_OFFSET_PLUS
+            _mem.shift = FLAGS1_OFFSET_PLUS
 
         # set band
         if number < 200:
