@@ -710,6 +710,8 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         _mem.rxcodeflag = rxmoval
         _mem.txcodeflag = txmoval
+        _mem.unknown1 = 0
+        _mem.unknown2 = 0
         _mem.rxcode = rxtoval
         _mem.txcode = txtoval
 
