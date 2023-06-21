@@ -47,8 +47,7 @@ DEBUG_SHOW_OBFUSCATED_COMMANDS = False
 # might be useful for someone debugging some obscure memory issue
 DEBUG_SHOW_MEMORY_ACTIONS = False
 
-DRIVER_VERSION = "Quansheng UV-K5 driver v20230619 (c) Jacek Lipkowski SQ5BPF"
-PRINT_CONSOLE = False
+DRIVER_VERSION = "Quansheng UV-K5 driver v20230621 (c) Jacek Lipkowski SQ5BPF"
 
 MEM_FORMAT = """
 #seekto 0x0000;
@@ -72,8 +71,25 @@ struct {
   is_in_scanlist:1,
   shift:2;
 
-  u8 flags2;
-  u8 dtmf_flags;
+  //u8 flags2;
+  u8 flags2_unknown7:1,
+  flags2_unknown6:1,
+  flags2_unknown5:1,
+  bclo:1,
+  txpower:2,
+  bandwidth:1,
+  freq_reverse:1;
+
+  //u8 dtmf_flags;
+  u8 dtmf_flags_unknown7:1,
+  dtmf_flags_unknown6:1,
+  dtmf_flags_unknown5:1,
+  dtmf_flags_unknown4:1,
+  dtmf_flags_unknown3:1,
+  dtmf_pttid:2,
+  dtmf_decode:1;
+
+
   u8 step;
   u8 scrambler;
 } channel[214];
@@ -200,31 +216,16 @@ SAVE_MASK_0E = 0b11110001
 SAVE_MASK_0F = 0b11110000
 
 # flags1
-FLAGS1_OFFSET_MASK = 0b11
 FLAGS1_OFFSET_NONE = 0b00
 FLAGS1_OFFSET_MINUS = 0b10
 FLAGS1_OFFSET_PLUS = 0b01
 
-FLAGS1_ISSCANLIST = 0b100
-FLAGS1_ISAM = 0b10000
-
-# flags2
-FLAGS2_BCLO = 0b10000
-FLAGS2_POWER_MASK = 0b1100
-FLAGS2_POWER_HIGH = 0b1000
-FLAGS2_POWER_MEDIUM = 0b0100
-FLAGS2_POWER_LOW = 0b0000
-FLAGS2_BANDWIDTH = 0b10
-FLAGS2_REVERSE = 0b1
+POWER_HIGH = 0b10
+POWER_MEDIUM = 0b01
+POWER_LOW = 0b00
 
 # dtmf_flags
 PTTID_LIST = ["off", "BOT", "EOT", "BOTH"]
-FLAGS_DTMF_PTTID_MASK = 0b110  # PTTID: 00-disabled, 01-BOT, 10-EOT, 11-BOTH
-FLAGS_DTMF_PTTID_DISABLED = 0b000
-FLAGS_DTMF_PTTID_BOT = 0b010
-FLAGS_DTMF_PTTID_EOT = 0b100
-FLAGS_DTMF_PTTID_BOTH = 0b110
-FLAGS_DTMF_DECODE = 0b1
 
 # power
 UVK5_POWER_LEVELS = [chirp_common.PowerLevel("Low",  watts=1.50),
@@ -280,9 +281,11 @@ DTCS_CODES = [
 ]
 
 FLOCK_LIST = ["Off", "FCC", "CE", "GB", "430", "438"]
+
 SCANRESUME_LIST = ["TO: Resume after 5 seconds",
                    "CO: Resume after signal dissapears",
                    "SE: Stop scanning after receiving a signal"]
+
 WELCOME_LIST = ["Full Screen", "Welcome Info", "Voltage"]
 KEYPADTONE_LIST = ["Off", "Chinese", "English"]
 LANGUAGE_LIST = ["Chinese", "English"]
@@ -320,7 +323,6 @@ BANDS_NOLIMITS = {
         5: [400.0, 469.9999],
         6: [470.0, 1300.0]
         }
-BANDMASK = 0b1111
 
 VFO_CHANNEL_NAMES = ["F1(50M-76M)A", "F1(50M-76M)B",
                      "F2(108M-136M)A", "F2(108M-136M)B",
@@ -854,7 +856,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if (mem.offset == 0):
             mem.duplex = ''
         else:
-            if _mem.shift  == FLAGS1_OFFSET_MINUS:
+            if _mem.shift == FLAGS1_OFFSET_MINUS:
                 mem.duplex = '-'
             elif _mem.shift == FLAGS1_OFFSET_PLUS:
                 mem.duplex = '+'
@@ -866,12 +868,12 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # mode
         if _mem.enable_am > 0:
-            if (_mem.flags2 & FLAGS2_BANDWIDTH) > 0:
+            if _mem.bandwidth > 0:
                 mem.mode = "NAM"
             else:
                 mem.mode = "AM"
         else:
-            if (_mem.flags2 & FLAGS2_BANDWIDTH) > 0:
+            if _mem.bandwidth > 0:
                 mem.mode = "NFM"
             else:
                 mem.mode = "FM"
@@ -884,9 +886,9 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             mem.tuning_step = 2.5
 
         # power
-        if (_mem.flags2 & FLAGS2_POWER_MASK) == FLAGS2_POWER_HIGH:
+        if _mem.txpower == POWER_HIGH:
             mem.power = UVK5_POWER_LEVELS[2]
-        elif (_mem.flags2 & FLAGS2_POWER_MASK) == FLAGS2_POWER_MEDIUM:
+        elif _mem.txpower == POWER_MEDIUM:
             mem.power = UVK5_POWER_LEVELS[1]
         else:
             mem.power = UVK5_POWER_LEVELS[0]
@@ -900,26 +902,26 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         mem.extra = RadioSettingGroup("Extra", "extra")
 
         # BCLO
-        is_bclo = bool(_mem.flags2 & FLAGS2_BCLO > 0)
+        is_bclo = bool(_mem.bclo > 0)
         rs = RadioSetting("bclo", "BCLO", RadioSettingValueBoolean(is_bclo))
         mem.extra.append(rs)
         tmpcomment += "BCLO:"+(is_bclo and "ON" or "off")+" "
 
         # Frequency reverse - whatever that means, don't see it in the manual
-        is_frev = bool(_mem.flags2 & FLAGS2_REVERSE > 0)
+        is_frev = bool(_mem.freq_reverse > 0)
         rs = RadioSetting("frev", "FreqRev", RadioSettingValueBoolean(is_frev))
         mem.extra.append(rs)
         tmpcomment += "FreqReverse:"+(is_frev and "ON" or "off")+" "
 
         # PTTID
-        pttid = (_mem.dtmf_flags & FLAGS_DTMF_PTTID_MASK) >> 1
+        pttid = _mem.dtmf_pttid
         rs = RadioSetting("pttid", "PTTID", RadioSettingValueList(
             PTTID_LIST, PTTID_LIST[pttid]))
         mem.extra.append(rs)
         tmpcomment += "PTTid:"+PTTID_LIST[pttid]+" "
 
         # DTMF DECODE
-        is_dtmf = bool(_mem.dtmf_flags & FLAGS_DTMF_DECODE > 0)
+        is_dtmf = bool(_mem.dtmf_decode > 0)
         rs = RadioSetting("dtmfdecode", "DTMF decode",
                           RadioSettingValueBoolean(is_dtmf))
         mem.extra.append(rs)
@@ -936,8 +938,6 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         mem.extra.append(rs)
         tmpcomment += "Scrambler:"+SCRAMBLER_LIST[enc]+" "
 
-        # scanlists
-        pttid = (_mem.dtmf_flags & FLAGS_DTMF_PTTID_MASK) >> 1
         rs = RadioSetting("scanlists", "Scanlists", RadioSettingValueList(
             SCANLIST_LIST, tmpscn))
         mem.extra.append(rs)
@@ -1870,17 +1870,17 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # mode
         if mem.mode == "NFM":
-            _mem.flags2 = _mem.flags2 | FLAGS2_BANDWIDTH
-            _mem.enable_am = 0;
+            _mem.bandwidth = 1
+            _mem.enable_am = 0
         elif mem.mode == "FM":
-            _mem.flags2 = _mem.flags2 & ~FLAGS2_BANDWIDTH
-            _mem.enable_am = 0;
+            _mem.bandwidth = 0
+            _mem.enable_am = 0
         elif mem.mode == "NAM":
-            _mem.flags2 = _mem.flags2 | FLAGS2_BANDWIDTH
-            _mem.enable_am = 1;
+            _mem.bandwidth = 1
+            _mem.enable_am = 1
         elif mem.mode == "AM":
-            _mem.flags2 = _mem.flags2 & ~FLAGS2_BANDWIDTH
-            _mem.enable_am = 1;
+            _mem.bandwidth = 0
+            _mem.enable_am = 1
 
         # frequency/offset
         _mem.freq = mem.freq/10
@@ -1913,40 +1913,27 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # tx power
         if str(mem.power) == str(UVK5_POWER_LEVELS[2]):
-            _mem.flags2 = (
-                _mem.flags2 & ~FLAGS2_POWER_MASK) | FLAGS2_POWER_HIGH
+            _mem.txpower = POWER_HIGH
         elif str(mem.power) == str(UVK5_POWER_LEVELS[1]):
-            _mem.flags2 = (
-                _mem.flags2 & ~FLAGS2_POWER_MASK) | FLAGS2_POWER_MEDIUM
+            _mem.txpower = POWER_MEDIUM
         else:
-            _mem.flags2 = (_mem.flags2 & ~FLAGS2_POWER_MASK)
+            _mem.txpower = POWER_LOW
 
         for setting in mem.extra:
             sname = setting.get_name()
             svalue = setting.value.get_value()
 
             if sname == "bclo":
-                if svalue:
-                    _mem.flags2 = _mem.flags2 | FLAGS2_BCLO
-                else:
-                    _mem.flags2 = _mem.flags2 & ~FLAGS2_BCLO
+                _mem.bclo = svalue and 1 or 0
 
             if sname == "pttid":
-                _mem.dtmf_flags = (
-                        (_mem.dtmf_flags & ~FLAGS_DTMF_PTTID_MASK)
-                        | (PTTID_LIST.index(svalue) << 1))
+                _mem.dtmf_pttid = PTTID_LIST.index(svalue)
 
             if sname == "frev":
-                if svalue:
-                    _mem.flags2 = _mem.flags2 | FLAGS2_REVERSE
-                else:
-                    _mem.flags2 = _mem.flags2 & ~FLAGS2_REVERSE
+                _mem.freq_reverse = svalue and 1 or 0
 
             if sname == "dtmfdecode":
-                if svalue:
-                    _mem.dtmf_flags = _mem.dtmf_flags | FLAGS_DTMF_DECODE
-                else:
-                    _mem.dtmf_flags = _mem.dtmf_flags & ~FLAGS_DTMF_DECODE
+                _mem.dtmf_decode = svalue and 1 or 0
 
             if sname == "scrambler":
                 _mem.scrambler = (
