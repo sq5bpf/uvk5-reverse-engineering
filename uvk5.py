@@ -710,6 +710,28 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
     def validate_memory(self, mem):
         msgs = super().validate_memory(mem)
+
+        # find tx frequency
+        if mem.duplex == '-':
+            txfreq = mem.freq - mem.offset
+        elif mem.duplex == '+':
+            txfreq = mem.freq + mem.offset
+        else:
+            txfreq = mem.freq
+
+        # find band
+        band = _find_band(self, txfreq)
+        if band is False:
+            msg = "Transmit frequency %.4fMHz is not supported by this radio" \
+                   % (txfreq/1000000.0)
+            msgs.append(chirp_common.ValidationWarning(msg))
+
+        band = _find_band(self, mem.freq)
+        if band is False:
+            msg = "The frequency %.4fMHz is not supported by this radio" \
+                   % (mem.freq/1000000.0)
+            msgs.append(chirp_common.ValidationWarning(msg))
+
         return msgs
 
     def _set_tone(self, mem, _mem):
@@ -1903,24 +1925,8 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             _mem4.channel_attributes[number].is_free = 1
             _mem4.channel_attributes[number].band = 0x7
 
-        # find tx frequency
-        if mem.duplex == '-':
-            txfreq = mem.freq - mem.offset
-        elif mem.duplex == '+':
-            txfreq = mem.freq + mem.offset
-        else:
-            txfreq = mem.freq
-
         # find band
-        band = _find_band(self, txfreq)
-        if band is False:
-            raise errors.RadioError(
-                    "Transmit frequency %.4fMHz is not supported by this radio"
-                    % txfreq/1000000.0)
-
         band = _find_band(self, mem.freq)
-        if band is False:
-            return mem
 
         # mode
         if mem.mode == "NFM":
