@@ -8,9 +8,7 @@
 # https://github.com/sq5bpf/uvk5-reverse-engineering
 #
 # Warning: this driver is experimental, it may brick your radio,
-# eat your lunch and mess up your configuration. Before even attempting
-# to use it save a memory image from the radio using k5prog:
-# https://github.com/sq5bpf/k5prog
+# eat your lunch and mess up your configuration.
 #
 #
 # This program is free software: you can redistribute it and/or modify
@@ -47,6 +45,7 @@ DEBUG_SHOW_OBFUSCATED_COMMANDS = False
 # might be useful for someone debugging some obscure memory issue
 DEBUG_SHOW_MEMORY_ACTIONS = False
 
+# TODO: remove the driver version when it's in mainline chirp
 DRIVER_VERSION = "Quansheng UV-K5 driver v20230621 (c) Jacek Lipkowski SQ5BPF"
 
 MEM_FORMAT = """
@@ -112,8 +111,8 @@ u8 call_channel;
 u8 squelch;
 u8 max_talk_time;
 u8 noaa_autoscan;
-u8 unknown1;
-u8 unknown2;
+u8 key_lock;
+u8 vox_switch;
 u8 vox_level;
 u8 mic_gain;
 u8 unknown3;
@@ -121,6 +120,7 @@ u8 channel_display_mode;
 u8 crossband;
 u8 battery_save;
 u8 dual_watch;
+u8 backlight_auto_mode;
 u8 tail_note_elimination;
 u8 vfo_open;
 
@@ -193,7 +193,7 @@ u8 int_unknown1;
 u8 int_200tx;
 u8 int_500tx;
 u8 int_350en;
-u8 int_screen;
+u8 int_scren;
 
 #seekto 0xf50;
 struct {
@@ -240,6 +240,9 @@ SCRAMBLER_LIST = ["off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 CHANNELDISP_LIST = ["Frequency", "Channel No", "Channel Name"]
 # battery save
 BATSAVE_LIST = ["OFF", "1:1", "1:2", "1:3", "1:4"]
+
+# Backlight auto mode
+BACKLIGHT_LIST = ["Off", "1s", "2s", "3s", "4s", "5s"]
 
 # Crossband receiving/transmitting
 CROSSBAND_LIST = ["Off", "Band A", "Band B"]
@@ -324,6 +327,23 @@ BANDS_NOLIMITS = {
         6: [470.0, 1300.0]
         }
 
+SPECIALS = {
+        "F1(50M-76M)A": 200,
+        "F1(50M-76M)B": 201,
+        "F2(108M-136M)A": 202,
+        "F2(108M-136M)B": 203,
+        "F3(136M-174M)A": 204,
+        "F3(136M-174M)B": 205,
+        "F4(174M-350M)A": 206,
+        "F4(174M-350M)B": 207,
+        "F5(350M-400M)A": 208,
+        "F5(350M-400M)B": 209,
+        "F6(400M-470M)A": 210,
+        "F6(400M-470M)B": 211,
+        "F7(470M-600M)A": 212,
+        "F7(470M-600M)B": 213
+        }
+
 VFO_CHANNEL_NAMES = ["F1(50M-76M)A", "F1(50M-76M)B",
                      "F2(108M-136M)A", "F2(108M-136M)B",
                      "F3(136M-174M)A", "F3(136M-174M)B",
@@ -403,8 +423,6 @@ def _receive_reply(serport):
                     (util.hexprint(header), len(header)))
         raise errors.RadioError("Bad response header")
 
-        return False
-
     cmd = serport.read(int(header[2]))
     if len(cmd) != int(header[2]):
         LOG.warning("Body short read: [%s] len=%i" %
@@ -425,7 +443,6 @@ def _receive_reply(serport):
         LOG.warning("Bad response footer: %s len=%i" %
                     (util.hexprint(footer), len(footer)))
         raise errors.RadioError("Bad response footer")
-        return False
 
     if DEBUG_SHOW_OBFUSCATED_COMMANDS:
         LOG.debug("Received reply (obfuscated) len=0x%4.4x:\n%s" %
@@ -452,7 +469,7 @@ def _sayhello(serport):
     hellopacket = b"\x14\x05\x04\x00\x6a\x39\x57\x64"
 
     tries = 5
-    while (True):
+    while True:
         LOG.debug("Sending hello packet")
         _send_command(serport, hellopacket)
         o = _receive_reply(serport)
@@ -462,7 +479,6 @@ def _sayhello(serport):
         if tries == 0:
             LOG.warning("Failed to initialise radio")
             raise errors.RadioError("Failed to initialize radio")
-            return False
     firmware = _getstring(o, 4, 16)
     LOG.info("Found firmware: %s" % firmware)
     return firmware
@@ -509,7 +525,6 @@ def _writemem(serport, data, offset):
     else:
         LOG.warning("Bad data from writemem")
         raise errors.RadioError("Bad response to writemem")
-    return False
 
 
 def _resetradio(serport):
@@ -610,10 +625,10 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     def get_prompts(x=None):
         rp = chirp_common.RadioPrompts()
         rp.experimental = \
-            ('This is an experimental driver for the Quanscheng UV-K5. '
+            ('This is an experimental driver for the Quansheng UV-K5. '
              'It may harm your radio, or worse. Use at your own risk.\n\n'
              'Before attempting to do any changes please download'
-             'the memory image from the radio with chirp or k5prog '
+             'the memory image from the radio with chirp '
              'and keep it. This can be later used to recover the '
              'original settings. \n\n'
              'some details are not yet implemented')
@@ -622,14 +637,14 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             "2. Connect cable to mic/spkr connector.\n"
             "3. Make sure connector is firmly connected.\n"
             "4. Click OK to download image from device.\n\n"
-            "It will may not work if you turn o the radio "
+            "It will may not work if you turn on the radio "
             "with the cable already attached\n")
         rp.pre_upload = _(
             "1. Turn radio on.\n"
             "2. Connect cable to mic/spkr connector.\n"
             "3. Make sure connector is firmly connected.\n"
             "4. Click OK to upload the image to device.\n\n"
-            "It will may not work if you turn o the radio "
+            "It will may not work if you turn on the radio "
             "with the cable already attached")
         return rp
 
@@ -643,8 +658,9 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         rf.has_ctone = True
         rf.has_settings = True
         rf.has_comment = False
-        rf.valid_name_length = 16
+        rf.valid_name_length = 10
         rf.valid_power_levels = UVK5_POWER_LEVELS
+        rf.valid_special_chans = list(SPECIALS.keys())
 
         # hack so we can input any frequency,
         # the 0.1 and 0.01 steps don't work unfortunately
@@ -661,7 +677,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         rf.valid_skips = [""]
 
         # This radio supports memories 1-200, 201-214 are the VFO memories
-        rf.memory_bounds = (1, 214)
+        rf.memory_bounds = (1, 200)
 
         # This is what the BK4819 chip supports
         # Will leave it in a comment, might be useful someday
@@ -770,21 +786,20 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     # Extract a high-level memory object from the low-level memory map
     # This is called to populate a memory in the UI
     def get_memory(self, number2):
-        number = number2-1  # in the radio memories start with 0
 
         mem = chirp_common.Memory()
 
-        # cutting and pasting configs from different radios
-        # might try to set channel 0
-        if number2 == 0:
-            LOG.warning("Attempt to get channel 0")
-            return mem
+        if isinstance(number2, str):
+            number = SPECIALS[number2]
+            mem.extd_number = number2
+        else:
+            number = number2 - 1
+
+        mem.number = number + 1
 
         _mem = self._memobj.channel[number]
 
         tmpcomment = ""
-
-        mem.number = number2
 
         is_empty = False
         # We'll consider any blank (i.e. 0MHz frequency) to be empty
@@ -963,9 +978,14 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             # TOT
             if element.get_name() == "tot":
                 _mem.max_talk_time = int(element.value)
+
             # NOAA autoscan
             if element.get_name() == "noaa_autoscan":
                 _mem.noaa_autoscan = element.value and 1 or 0
+
+            # VOX switch
+            if element.get_name() == "vox_switch":
+                _mem.vox_switch = element.value and 1 or 0
 
             # vox level
             if element.get_name() == "vox_level":
@@ -991,6 +1011,11 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             if element.get_name() == "dualwatch":
                 _mem.dual_watch = DUALWATCH_LIST.index(str(element.value))
 
+            # Backlight auto mode
+            if element.get_name() == "backlight_auto_mode":
+                _mem.backlight_auto_mode = \
+                        BACKLIGHT_LIST.index(str(element.value))
+
             # Tail tone elimination
             if element.get_name() == "tail_note_elimination":
                 _mem.tail_note_elimination = element.value and 1 or 0
@@ -1007,6 +1032,10 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             if element.get_name() == "scan_resume_mode":
                 _mem.scan_resume_mode = SCANRESUME_LIST.index(
                     str(element.value))
+
+            # Keypad lock
+            if element.get_name() == "key_lock":
+                _mem.key_lock = element.value and 1 or 0
 
             # Auto keypad lock
             if element.get_name() == "auto_keypad_lock":
@@ -1058,10 +1087,6 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             if element.get_name() == "350tx":
                 _mem.int_350tx = element.value and 1 or 0
 
-            # UNKNOWN1
-            if element.get_name() == "unknown1":
-                _mem.int_unknown1 = element.value and 1 or 0
-
             # 200TX
             if element.get_name() == "200tx":
                 _mem.int_200tx = element.value and 1 or 0
@@ -1073,6 +1098,10 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             # 350EN
             if element.get_name() == "350en":
                 _mem.int_350en = element.value and 1 or 0
+
+            # SCREN
+            if element.get_name() == "scren":
+                _mem.int_scren = element.value and 1 or 0
 
             # fm radio
             for i in range(1, 21):
@@ -1548,6 +1577,13 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                     bool(_mem.noaa_autoscan > 0)))
         basic.append(rs)
 
+        # VOX switch
+        rs = RadioSetting(
+                "vox_switch",
+                "VOX enabled", RadioSettingValueBoolean(
+                    bool(_mem.vox_switch > 0)))
+        basic.append(rs)
+
         # VOX Level
         tmpvox = _mem.vox_level+1
         if tmpvox > 10:
@@ -1608,6 +1644,17 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             DUALWATCH_LIST, DUALWATCH_LIST[tmpdual]))
         basic.append(rs)
 
+        # Backlight auto mode
+        tmpback = _mem.backlight_auto_mode
+        if tmpback >= len(BACKLIGHT_LIST):
+            tmpback = 0
+        rs = RadioSetting("backlight_auto_mode",
+                          "Backlight auto mode",
+                          RadioSettingValueList(
+                              BACKLIGHT_LIST,
+                              BACKLIGHT_LIST[tmpback]))
+        basic.append(rs)
+
         # Tail tone elimination
         rs = RadioSetting(
                 "tail_note_elimination",
@@ -1638,6 +1685,13 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                 RadioSettingValueList(
                     SCANRESUME_LIST,
                     SCANRESUME_LIST[tmpscanres]))
+        basic.append(rs)
+
+        # Keypad locked
+        rs = RadioSetting(
+                "key_lock",
+                "Keypad lock",
+                RadioSettingValueBoolean(bool(_mem.key_lock > 0)))
         basic.append(rs)
 
         # Auto keypad lock
@@ -1744,34 +1798,33 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         unlock.append(rs)
 
         # 350TX
-        rs = RadioSetting("350tx", "350TX", RadioSettingValueBoolean(
-            bool(_mem.int_350tx > 0)))
-        unlock.append(rs)
-
-        # unknown1
-        rs = RadioSetting("unknown11", "UNKNOWN1",
+        rs = RadioSetting("350tx", "350TX - unlock 350-400MHz TX",
                           RadioSettingValueBoolean(
-                              bool(_mem.int_unknown1 > 0)))
+                              bool(_mem.int_350tx > 0)))
         unlock.append(rs)
 
         # 200TX
-        rs = RadioSetting("200tx", "200TX", RadioSettingValueBoolean(
-            bool(_mem.int_200tx > 0)))
+        rs = RadioSetting("200tx", "200TX - unlock 174-350MHz TX",
+                          RadioSettingValueBoolean(
+                              bool(_mem.int_200tx > 0)))
         unlock.append(rs)
 
         # 500TX
-        rs = RadioSetting("500tx", "500TX", RadioSettingValueBoolean(
-            bool(_mem.int_500tx > 0)))
+        rs = RadioSetting("500tx", "500TX - unlock 500-600MHz TX",
+                          RadioSettingValueBoolean(
+                              bool(_mem.int_500tx > 0)))
         unlock.append(rs)
 
         # 350EN
-        rs = RadioSetting("350en", "350EN", RadioSettingValueBoolean(
-            bool(_mem.int_350en > 0)))
+        rs = RadioSetting("350en", "350EN - unlock 350-400MHz RX",
+                          RadioSettingValueBoolean(
+                              bool(_mem.int_350en > 0)))
         unlock.append(rs)
 
         # SCREEN
-        rs = RadioSetting("screen", "SCREEN", RadioSettingValueBoolean(
-            bool(_mem.int_screen > 0)))
+        rs = RadioSetting("scren", "SCREN - scrambler enable",
+                          RadioSettingValueBoolean(
+                              bool(_mem.int_scren > 0)))
         unlock.append(rs)
 
         # readonly info
@@ -1787,6 +1840,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         rs = RadioSetting("fw_ver", "Firmware Version", val)
         roinfo.append(rs)
 
+        # TODO: remove showing the driver version when it's in mainline chirp
         # Driver version
         val = RadioSettingValueString(0, 128, DRIVER_VERSION)
         val.set_mutable(False)
@@ -1902,7 +1956,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # channels >200 are the 14 VFO chanells and don't have names
         if number < 200:
             _mem2 = self._memobj.channelname[number]
-            tag = mem.name.ljust(16)[:16]
+            tag = mem.name.ljust(10) + "\x00"*6
             _mem2.name = tag  # Store the alpha tag
 
         # tone data
