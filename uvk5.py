@@ -46,7 +46,7 @@ DEBUG_SHOW_OBFUSCATED_COMMANDS = False
 DEBUG_SHOW_MEMORY_ACTIONS = False
 
 # TODO: remove the driver version when it's in mainline chirp
-DRIVER_VERSION = "Quansheng UV-K5 driver v20230621 (c) Jacek Lipkowski SQ5BPF"
+DRIVER_VERSION = "Quansheng UV-K5 driver v20230626 (c) Jacek Lipkowski SQ5BPF"
 
 MEM_FORMAT = """
 #seekto 0x0000;
