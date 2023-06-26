@@ -1091,13 +1091,13 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
             # Logo string 1
             if element.get_name() == "logo1":
-                b = str(element.value).rstrip("\x20\xff\x00")+"\x00"*12
-                _mem.logo_line1 = b[0:12]+"\xff\xff\xff\xff"
+                b = str(element.value).rstrip("\x20\xff\x00")+"\x00"*11
+                _mem.logo_line1 = b[0:11]+"\x00\xff\xff\xff\xff"
 
             # Logo string 2
             if element.get_name() == "logo2":
-                b = str(element.value).rstrip("\x20\xff\x00")+"\x00"*12
-                _mem.logo_line2 = b[0:12]+"\xff\xff\xff\xff"
+                b = str(element.value).rstrip("\x20\xff\x00")+"\x00"*11
+                _mem.logo_line2 = b[0:11]+"\x00\xff\xff\xff\xff"
 
             # unlock settings
 
@@ -1783,16 +1783,16 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # Logo string 1
         logo1 = str(_mem.logo_line1).strip("\x20\x00\xff") + "\x00"
-        logo1 = _getstring(logo1.encode('ascii', errors='ignore'), 0, 12)
-        rs = RadioSetting("logo1", "Logo string 1 (12 characters)",
-                          RadioSettingValueString(0, 12, logo1))
+        logo1 = _getstring(logo1.encode('ascii', errors='ignore'), 0, 11)
+        rs = RadioSetting("logo1", "Logo string 1 (11 characters)",
+                          RadioSettingValueString(0, 11, logo1))
         basic.append(rs)
 
         # Logo string 2
         logo2 = str(_mem.logo_line2).strip("\x20\x00\xff") + "\x00"
-        logo2 = _getstring(logo2.encode('ascii', errors='ignore'), 0, 12)
-        rs = RadioSetting("logo2", "Logo string 2 (12 characters)",
-                          RadioSettingValueString(0, 12, logo2))
+        logo2 = _getstring(logo2.encode('ascii', errors='ignore'), 0, 11)
+        rs = RadioSetting("logo2", "Logo string 2 (11 characters)",
+                          RadioSettingValueString(0, 11, logo2))
         basic.append(rs)
 
         # FM radio
